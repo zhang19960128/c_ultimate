@@ -17,7 +17,7 @@ int main(int argc, const char * argv[]) {
     time_t t1,t2;
     time(&t1);
     double fraction=0.7;
-    int N=4000;
+    int N=1000;
     double volume=0;
     double temp=0;
     double len;
@@ -44,8 +44,14 @@ int main(int argc, const char * argv[]) {
     }
     //**************end initialization for particles**************//
     fire(N, len, allpart);
-    FILE fp;
-    
+    FILE* fp;
+    fp=fopen("particle.txt","w");
+    for (int i=0; i<N; i++) {
+        for (int j=0; j<3; j++) {
+            fprintf(fp,"%0.15lf ",allpart[i].posit[j]);
+        }
+        fprintf(fp, "\n");
+    }
     time(&t2);
     printf("the length of the system is: %.20lf time used: %lf\n",len,difftime(t2, t1));
     return 0;

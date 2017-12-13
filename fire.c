@@ -12,7 +12,7 @@
 #include "particle.h"
 void fire(int N,double len,particle* allpart){
     int N_min=5;
-    double Dt=0.05;
+    double Dt=1;
     double f_inc=1.1;
     double f_dec=0.5;
     double alpha_start=0.1;
@@ -28,6 +28,7 @@ void fire(int N,double len,particle* allpart){
     }
     celllen=celllen*2;//the cutoff length should be twice the maximum radius;
     cellsize=ceil(len/celllen);//show how many cell on each edge.
+    printf("we have %d cell on the edge\n",cellsize);
     parnode *cellall[cellsize*cellsize*cellsize];
     //%%%%%%specify the head for each cell%%%%%%%%//
     for (size_t i=0; i<cellsize*cellsize*cellsize; i++) {
@@ -52,7 +53,6 @@ void fire(int N,double len,particle* allpart){
         leapfrogone(N, Dt, len, allpart);
         updateforce(N, len, allpart);
         leapfrogtwo(N, Dt, allpart);
-        /*
         pow=power(N,allpart);
         setv(N,alpha,allpart);
         if(pow>0&&count>N_min){
@@ -69,10 +69,8 @@ void fire(int N,double len,particle* allpart){
             alpha=alpha_start;
             freeze(N,allpart);
         }
-         */
         e_end=energy(N,len,allpart);
-        printf("step:%d energy is: %lf\n",i,e_end+kinetic(N, allpart));
-    }while(i<5000);
+    }while(fabs(e_end-e_before)>1e-14&&i<10000);
 };
 double energy(int N,double len,particle* allpart){
     parnode* temp;
