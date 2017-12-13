@@ -16,7 +16,7 @@
 int main(int argc, const char * argv[]) {
     time_t t1,t2;
     time(&t1);
-    double fraction=0.8;
+    double fraction=0.7;
     int N=4000;
     double volume=0;
     double temp=0;
@@ -32,7 +32,7 @@ int main(int argc, const char * argv[]) {
     }
     for (size_t i=0; i<N; i++) {
         temp=allpart[i].radius;
-        volume=volume+pi/3.0*4*temp*temp*temp;
+        volume=volume+pi/3.0*4.0*temp*temp*temp;
     }
     len=cbrt(volume/fraction);
     for (size_t i=0; i<N; i++) {
@@ -44,7 +44,9 @@ int main(int argc, const char * argv[]) {
     }
     //**************end initialization for particles**************//
     fire(N, len, allpart);
+    FILE fp;
+    
     time(&t2);
-    printf("the length of the system is: %lf time used: %lf\n",len,difftime(t2, t1));
+    printf("the length of the system is: %.20lf time used: %lf\n",len,difftime(t2, t1));
     return 0;
 }

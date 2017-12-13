@@ -24,4 +24,5 @@ void setv(int N,double alpha,particle* allpart);
 double power(int N,particle* allpart);
 void freeze(int N,particle* allpart);
 double energy(int N,double len,particle* allpart);
+double kinetic(int N,particle* allpart);
 #endif /* fire_h */

@@ -18,7 +18,7 @@ struct particlep{
     double posit[3];
     double speed[3];
     double force[3];
-    double cindex[3];
+    int cindex[3];
     double radius;
     parnode* neighbor;
     parnode* tail;//specify the tail pointer for the list

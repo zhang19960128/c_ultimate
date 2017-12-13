@@ -39,6 +39,10 @@ void fire(int N,double len,particle* allpart){
     //%%%%%%starting fire algorithm%%%%%%%%%%%%%%//
     int i=0;
     e_end=0;
+    updatepincell(N, len, celllen, allpart);
+    updatecellofp(N, cellsize, cellall, allpart);
+    updateallneigh(N, cellsize, len, cellall, allpart);
+    updateforce(N, len, allpart);
     do{
         i++;
         e_before=e_end;
@@ -48,13 +52,15 @@ void fire(int N,double len,particle* allpart){
         leapfrogone(N, Dt, len, allpart);
         updateforce(N, len, allpart);
         leapfrogtwo(N, Dt, allpart);
+        /*
         pow=power(N,allpart);
         setv(N,alpha,allpart);
-        if(pow>0){
-            if(count>N_min){
+        if(pow>0&&count>N_min){
+                count=0;
                 Dt=Dt*f_inc<Dt_max ? Dt*f_inc:Dt_max;
                 alpha=alpha*f_alpha;
-            }
+        }
+        else if (pow>0){
             count=0;
         }
         else{
@@ -63,10 +69,10 @@ void fire(int N,double len,particle* allpart){
             alpha=alpha_start;
             freeze(N,allpart);
         }
-        printf("this is the %d step ",i);
+         */
         e_end=energy(N,len,allpart);
-        printf(" energy is: %lf\n",e_end);
-    }while(i<10000);
+        printf("step:%d energy is: %lf\n",i,e_end+kinetic(N, allpart));
+    }while(i<5000);
 };
 double energy(int N,double len,particle* allpart){
     parnode* temp;
@@ -84,6 +90,15 @@ double energy(int N,double len,particle* allpart){
     }
     return ener/2;
 }
+double kinetic(int N,particle* allpart){
+    double kall=0;
+    for (int i=0; i<N; i++) {
+        for (int j=0; j<3; j++) {
+            kall=kall+allpart[i].speed[j]*allpart[i].speed[j];
+        }
+    }
+    return kall/2.0;
+}
 void setv(int N,double alpha,particle* allpart){
     double normf=0;
     double normv=0;
@@ -100,7 +115,7 @@ void setv(int N,double alpha,particle* allpart){
     normv=sqrt(normv);
     for (size_t i=0; i<N; i++) {
         for (size_t k=0; k<3; k++) {
-            allpart[i].speed[k]=(1-alpha)*allpart[i].speed[k]+alpha*allpart[i].force[k]/normf*normv;
+            allpart[i].speed[k]=(1-alpha)*allpart[i].speed[k]+alpha*normv*allpart[i].force[k]/normf;
         }
     }
 }
@@ -140,23 +155,30 @@ void leapfrogtwo(int N,double Dt,particle* allpart){
 //update the force for each particle.
 void updateforce(int N,double len,particle* allpart){
     parnode* temp;
-    double force[3]={0,0,0};
+    double force_temp[3]={0,0,0};
     double tempdis;
     double rij;
     double dij;
     for (int i=0; i<N; i++) {
+        //clear the temp force.
+        for(size_t j=0;j<3;j++){
+            force_temp[j]=0;
+        }
+        //started to sum the all force.
         temp=allpart[i].neighbor->next;
         while (temp!=NULL) {
             rij=distance(temp->index, i, len, allpart);
             dij=allpart[temp->index].radius+allpart[i].radius;
             for (size_t j=0; j<3; j++) {
-                tempdis=(allpart[i].posit[j]/len-round(allpart[temp->index].posit[j]/len))*len;
-                force[j]=force[j]+2*(1-rij/dij)*tempdis/dij/rij;
+                tempdis=allpart[i].posit[j]-allpart[temp->index].posit[j];
+                tempdis=(tempdis/len-round(tempdis/len))*len;
+                force_temp[j]=force_temp[j]+2*(1-rij/dij)*tempdis/dij/rij;
             }
             temp=temp->next;
         }
+        //end sum the force.
         for(size_t j=0;j<3;j++){
-            allpart[i].force[j]=force[j];
+            allpart[i].force[j]=force_temp[j];
         }
     }
 }
@@ -169,25 +191,26 @@ void updateallneigh(int N,int cellsize,double len,parnode* cellall[],particle* a
 void updateoneneigh(int ind,int cellsize,double len,parnode* cellall[],particle* allpart){
     int box;
     double rij,dij;
-    parnode* temp1;
+    parnode* temp;
     allpart[ind].neighbor->next=NULL;
     allpart[ind].neighbor->tail=allpart[ind].neighbor;//clear the neighbor list for this particle.
-    for (size_t i=allpart[ind].cindex[0]-1;i<allpart[ind].cindex[0]+2 ; i++) {
-        for (size_t j=allpart[ind].cindex[1]-1; j<allpart[ind].cindex[1]+2; j++) {
-            for (size_t k=allpart[ind].cindex[2]-1; k<allpart[ind].cindex[2]+2; k++) {
+    for (int i=allpart[ind].cindex[0]-2;i<allpart[ind].cindex[0]+3 ; i++) {
+        for (int j=allpart[ind].cindex[1]-2; j<allpart[ind].cindex[1]+3; j++) {
+            for (int k=allpart[ind].cindex[2]-2; k<allpart[ind].cindex[2]+3; k++) {
                 //in these 9 cells we all potentially have iteractions with them.
                 box=(i+cellsize)%cellsize+((j+cellsize)%cellsize)*cellsize+((k+cellsize)%cellsize)*cellsize*cellsize;
-                temp1=cellall[box]->next;
-                while (temp1!=NULL) {
-                    if (temp1->index==ind) {
-                        continue;
+                temp=cellall[box]->next;
+                while (temp!=NULL) {
+                    if (temp->index!=ind) {
+                        rij=distance(temp->index, ind, len, allpart);
+                        dij=allpart[temp->index].radius+allpart[ind].radius;
+                        if (rij<dij) {
+                        addptolist(allpart[ind].neighbor,allpart[ind].neighbor->tail,temp->index);
+                        }
                     }
-                    rij=distance(temp1->index, ind, len, allpart);
-                    dij=allpart[temp1->index].radius+allpart[ind].radius;
-                    if (rij<dij) {
-                        addptolist(allpart[ind].neighbor,allpart[ind].neighbor->tail,temp1->index);
-                    }
-                    temp1=temp1->next;
+                    else{
+                    };
+                    temp=temp->next;
                 }
             }
         }
@@ -196,6 +219,12 @@ void updateoneneigh(int ind,int cellsize,double len,parnode* cellall[],particle*
 //this function is use to update the particles in the cell.
 void updatecellofp(int N,int cellsize,parnode* cellall[],particle *allpart){
     int tempindex;
+    //reset the cell list
+    for (size_t i=0; i<cellsize*cellsize*cellsize; i++) {
+        cellall[i]->next=NULL;
+        cellall[i]->tail=cellall[i];
+        cellall[i]->index=-1;//use index=-1 to show that this is the head and useless.
+    }
     for (int i=0; i<N; i++) {
         tempindex=allpart[i].cindex[0]+allpart[i].cindex[1]*cellsize+allpart[i].cindex[2]*cellsize*cellsize;
         addptolist(cellall[tempindex],cellall[tempindex]->tail,i);
@@ -215,6 +244,7 @@ void addptolist(parnode* head,parnode* tail,int in){
     parnode* temp3=(parnode*)malloc(sizeof(parnode));
     temp3->index=in;
     temp3->next=NULL;
+    head->tail->next=temp3;
     head->tail=temp3;
 };
 //show the periodical distance of two particle.
