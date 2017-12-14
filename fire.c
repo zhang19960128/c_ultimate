@@ -163,7 +163,6 @@ void updateforce(int N,double len,particle* allpart){
         while (temp!=NULL) {
             rij=distance(temp->index, i, len, allpart);
             dij=allpart[temp->index].radius+allpart[i].radius;
-            if(dij<rij) printf("dam shit\n");
                     for (size_t j=0; j<3; j++) {
                         tempdis=allpart[i].posit[j]-allpart[temp->index].posit[j];
                         tempdis=(tempdis/len-round(tempdis/len))*len;
