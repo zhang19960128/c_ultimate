@@ -17,14 +17,20 @@ int main(int argc, const char * argv[]) {
     time_t t1,t2;
     time(&t1);
     double fraction=0.7;
-    int N=100;
+    int N=200;
     double volume=0;
     double temp=0;
     double len;
+    double tempr=0;
     particle allpart[N];
     //***********start initial system for particles***************//
     for (int i=0; i<N; i++) {
-        allpart[i].radius=1;
+        tempr=gaussian(1,0.5);
+        if (tempr<0) {
+            tempr=fabs(tempr);
+        }
+     //   tempr=1.0;
+        allpart[i].radius=tempr;
         allpart[i].neighbor=(parnode*)malloc(sizeof(parnode));
         allpart[i].tail=allpart[i].neighbor;
         allpart[i].neighbor->index=-1;
@@ -50,6 +56,7 @@ int main(int argc, const char * argv[]) {
         for (int j=0; j<3; j++) {
             fprintf(fp,"%0.15lf ",allpart[i].posit[j]);
         }
+        fprintf(fp, "%0.15lf ",allpart[i].radius);
         fprintf(fp, "\n");
     }
     time(&t2);

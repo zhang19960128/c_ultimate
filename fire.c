@@ -17,6 +17,8 @@ void fire(int N,double len,particle* allpart){
     double f_dec=0.5;
     double alpha_start=0.1;
     double f_alpha=0.99;
+    double rmax1=0;
+    double rmax2=0;
     double celllen=0;//specify the cut off length of repusive force.
     double e_before,e_end,pow;
     double alpha=alpha_start;
@@ -24,9 +26,13 @@ void fire(int N,double len,particle* allpart){
     double Dt_max=10*Dt;
     int cellsize=0;//specify the length of each cell.
     for (size_t i=0; i<N; i++) {
-        if(celllen<allpart[i].radius) celllen=allpart[i].radius;
+        if (allpart[i].radius>rmax1) {
+            rmax1=allpart[i].radius;
+        }else if (allpart[i].radius>rmax2){
+            rmax2=allpart[i].radius;
+        }
     }
-    celllen=celllen*2;//the cutoff length should be twice the maximum radius;
+    celllen=rmax1+rmax2;//the cutoff length should be twice the maximum radius;
     cellsize=ceil(len/celllen);//show how many cell on each edge.
     printf("we have %d cell on the edge\n",cellsize);
     parnode *cellall[cellsize*cellsize*cellsize];
@@ -66,6 +72,7 @@ void fire(int N,double len,particle* allpart){
             freeze(N,allpart);
         }
         e_end=energy(N,len,allpart);
+        printf("this is the %d step, energy:%lf\n",i,e_end);
     }while(fabs(e_end-e_before)>1e-14);
 };
 double energy(int N,double len,particle* allpart){
@@ -163,11 +170,13 @@ void updateforce(int N,double len,particle* allpart){
         while (temp!=NULL) {
             rij=distance(temp->index, i, len, allpart);
             dij=allpart[temp->index].radius+allpart[i].radius;
+            if(rij<dij){
                     for (size_t j=0; j<3; j++) {
                         tempdis=allpart[i].posit[j]-allpart[temp->index].posit[j];
                         tempdis=(tempdis/len-round(tempdis/len))*len;
                         force_temp[j]=force_temp[j]+2*(1-rij/dij)*tempdis/dij/rij;
                     }
+            }
             temp=temp->next;
         }
         //end sum the force.
