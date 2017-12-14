@@ -25,4 +25,5 @@ double power(int N,particle* allpart);
 void freeze(int N,particle* allpart);
 double energy(int N,double len,particle* allpart);
 double kinetic(int N,particle* allpart);
+int* bias(int index,int cellsize,particle* allpart);
 #endif /* fire_h */

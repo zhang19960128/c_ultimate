@@ -70,7 +70,7 @@ void fire(int N,double len,particle* allpart){
             freeze(N,allpart);
         }
         e_end=energy(N,len,allpart);
-    }while(fabs(e_end-e_before)>1e-14&&i<10000);
+    }while(fabs(e_end-e_before)>1e-14&&i<6000);
 };
 double energy(int N,double len,particle* allpart){
     parnode* temp;
@@ -191,10 +191,11 @@ void updateoneneigh(int ind,int cellsize,double len,parnode* cellall[],particle*
     double rij,dij;
     parnode* temp;
     allpart[ind].neighbor->next=NULL;
+    int* diff=bias(ind, cellsize, allpart);//the boundary part should be consider two bias and inside only need one.
     allpart[ind].neighbor->tail=allpart[ind].neighbor;//clear the neighbor list for this particle.
-    for (int i=allpart[ind].cindex[0]-2;i<allpart[ind].cindex[0]+3 ; i++) {
-        for (int j=allpart[ind].cindex[1]-2; j<allpart[ind].cindex[1]+3; j++) {
-            for (int k=allpart[ind].cindex[2]-2; k<allpart[ind].cindex[2]+3; k++) {
+    for (int i=allpart[ind].cindex[0]-diff[0];i<allpart[ind].cindex[0]+diff[0]+1;i++) {
+        for (int j=allpart[ind].cindex[1]-diff[1]; j<allpart[ind].cindex[1]+diff[1]+1;j++) {
+            for (int k=allpart[ind].cindex[2]-diff[2]; k<allpart[ind].cindex[2]+diff[2]+1; k++) {
                 //in these 9 cells we all potentially have iteractions with them.
                 box=(i+cellsize)%cellsize+((j+cellsize)%cellsize)*cellsize+((k+cellsize)%cellsize)*cellsize*cellsize;
                 temp=cellall[box]->next;
@@ -214,6 +215,15 @@ void updateoneneigh(int ind,int cellsize,double len,parnode* cellall[],particle*
         }
     }
 };
+int* bias(int index,int cellsize,particle* allpart){
+    int* result=(int*)malloc(sizeof(int));
+    for (size_t k=0; k<3; k++) {
+        if(allpart[index].cindex[k]==0||allpart[index].cindex[k]==cellsize-1||allpart[index].cindex[k]==cellsize-2){ result[k]=2;
+        }
+        else result[k]=1;
+    }
+    return result;
+}
 //this function is use to update the particles in the cell.
 void updatecellofp(int N,int cellsize,parnode* cellall[],particle *allpart){
     int tempindex;
