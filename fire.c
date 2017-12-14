@@ -40,17 +40,13 @@ void fire(int N,double len,particle* allpart){
     //%%%%%%starting fire algorithm%%%%%%%%%%%%%%//
     int i=0;
     e_end=0;
-    updatepincell(N, len, celllen, allpart);
-    updatecellofp(N, cellsize, cellall, allpart);
-    updateallneigh(N, cellsize, len, cellall, allpart);
-    updateforce(N, len, allpart);
     do{
         i++;
         e_before=e_end;
+        leapfrogone(N, Dt, len, allpart);
         updatepincell(N, len, celllen, allpart);
         updatecellofp(N, cellsize, cellall, allpart);
         updateallneigh(N, cellsize, len, cellall, allpart);
-        leapfrogone(N, Dt, len, allpart);
         updateforce(N, len, allpart);
         leapfrogtwo(N, Dt, allpart);
         pow=power(N,allpart);
@@ -70,7 +66,7 @@ void fire(int N,double len,particle* allpart){
             freeze(N,allpart);
         }
         e_end=energy(N,len,allpart);
-    }while(fabs(e_end-e_before)>1e-14&&i<6000);
+    }while(fabs(e_end-e_before)>1e-14);
 };
 double energy(int N,double len,particle* allpart){
     parnode* temp;
@@ -167,11 +163,12 @@ void updateforce(int N,double len,particle* allpart){
         while (temp!=NULL) {
             rij=distance(temp->index, i, len, allpart);
             dij=allpart[temp->index].radius+allpart[i].radius;
-            for (size_t j=0; j<3; j++) {
-                tempdis=allpart[i].posit[j]-allpart[temp->index].posit[j];
-                tempdis=(tempdis/len-round(tempdis/len))*len;
-                force_temp[j]=force_temp[j]+2*(1-rij/dij)*tempdis/dij/rij;
-            }
+            if(dij<rij) printf("dam shit\n");
+                    for (size_t j=0; j<3; j++) {
+                        tempdis=allpart[i].posit[j]-allpart[temp->index].posit[j];
+                        tempdis=(tempdis/len-round(tempdis/len))*len;
+                        force_temp[j]=force_temp[j]+2*(1-rij/dij)*tempdis/dij/rij;
+                    }
             temp=temp->next;
         }
         //end sum the force.

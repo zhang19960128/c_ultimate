@@ -17,7 +17,7 @@ int main(int argc, const char * argv[]) {
     time_t t1,t2;
     time(&t1);
     double fraction=0.7;
-    int N=4000;
+    int N=100;
     double volume=0;
     double temp=0;
     double len;
