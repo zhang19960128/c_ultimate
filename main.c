@@ -17,7 +17,7 @@ int main(int argc, const char * argv[]) {
     time_t t1,t2;
     time(&t1);
     double fraction=0.7;
-    int N=200;
+    int N=4000;
     double volume=0;
     double temp=0;
     double len;
@@ -29,7 +29,7 @@ int main(int argc, const char * argv[]) {
         if (tempr<0) {
             tempr=fabs(tempr);
         }
-     //   tempr=1.0;
+        tempr=1.0;
         allpart[i].radius=tempr;
         allpart[i].neighbor=(parnode*)malloc(sizeof(parnode));
         allpart[i].tail=allpart[i].neighbor;

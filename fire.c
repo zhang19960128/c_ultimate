@@ -19,7 +19,11 @@ void fire(int N,double len,particle* allpart){
     double f_alpha=0.99;
     double rmax1=0;
     double rmax2=0;
+    double rverlet=0;//store the radius for verlet neighbor list.
+    double rcutoff=0;
     double celllen=0;//specify the cut off length of repusive force.
+    double* maxstep;//use to update the verlet neighbor list.
+    double cummaxdistance=0;
     double e_before,e_end,pow;
     double alpha=alpha_start;
     int count=0;
@@ -32,7 +36,9 @@ void fire(int N,double len,particle* allpart){
             rmax2=allpart[i].radius;
         }
     }
-    celllen=rmax1+rmax2;//the cutoff length should be twice the maximum radius;
+    rcutoff=rmax1+rmax2;//the cutoff length should be the maximum radius plus the second maximum radius;
+    rverlet=1.3*rcutoff;
+    celllen=rverlet;
     cellsize=ceil(len/celllen);//show how many cell on each edge.
     printf("we have %d cell on the edge\n",cellsize);
     parnode *cellall[cellsize*cellsize*cellsize];
@@ -46,13 +52,25 @@ void fire(int N,double len,particle* allpart){
     //%%%%%%starting fire algorithm%%%%%%%%%%%%%%//
     int i=0;
     e_end=0;
+    //%%%%%%%%%starting the whole system%%%%%%%%%//
+    updatepincell(N, len, celllen, allpart);
+    updatecellofp(N, cellsize, cellall, allpart);
+    updateallneigh(N, cellsize, len,rverlet, cellall, allpart);
+    updateforce(N, len, allpart);
+    //%%%%%%%%%starting the whole system%%%%%%%%%//
     do{
         i++;
         e_before=e_end;
-        leapfrogone(N, Dt, len, allpart);
-        updatepincell(N, len, celllen, allpart);
-        updatecellofp(N, cellsize, cellall, allpart);
-        updateallneigh(N, cellsize, len, cellall, allpart);
+        maxstep=leapfrogone(N, Dt, len, allpart);
+        if (cummaxdistance>(rverlet-rcutoff)) {
+            cummaxdistance=0.0;
+            updatepincell(N, len, celllen, allpart);
+            updatecellofp(N, cellsize, cellall, allpart);
+            updateallneigh(N, cellsize, len,rverlet, cellall, allpart);
+        }
+        else{
+            cummaxdistance=cummaxdistance+maxstep[0]+maxstep[1];
+        }
         updateforce(N, len, allpart);
         leapfrogtwo(N, Dt, allpart);
         pow=power(N,allpart);
@@ -72,7 +90,7 @@ void fire(int N,double len,particle* allpart){
             freeze(N,allpart);
         }
         e_end=energy(N,len,allpart);
-        printf("this is the %d step, energy:%lf\n",i,e_end);
+        printf("step:%d, energy: %lf\n",i,e_end);
     }while(fabs(e_end-e_before)>1e-14);
 };
 double energy(int N,double len,particle* allpart){
@@ -85,7 +103,9 @@ double energy(int N,double len,particle* allpart){
         while (temp!=NULL) {
             rij=distance(temp->index, i, len, allpart);
             dij=allpart[temp->index].radius+allpart[i].radius;
-            ener=ener+(1-rij/dij)*(1-rij/dij);
+            if (rij<dij) {
+                ener=ener+(1-rij/dij)*(1-rij/dij);;
+            }
             temp=temp->next;
         }
     }
@@ -136,15 +156,30 @@ void freeze(int N,particle* allpart){
         }
     }
 }
-void leapfrogone(int N,double Dt,double len,particle* allpart){
-    double temp;
+double* leapfrogone(int N,double Dt,double len,particle* allpart){
+    double temp=0;
+    double tempdis=0;
+    double delta=0;
+    double *maxstep=(double*)malloc(2*sizeof(double));
+    maxstep[0]=0.0;
+    maxstep[1]=0.0;
     for(size_t i=0;i<N;i++){
+        tempdis=0;
         for(size_t j=0;j<3;j++){
-            temp=allpart[i].posit[j]+allpart[i].speed[j]*Dt+0.5*Dt*Dt*allpart[i].force[j];
+            delta=allpart[i].speed[j]*Dt+0.5*Dt*Dt*allpart[i].force[j];
+            temp=allpart[i].posit[j]+delta;
             allpart[i].posit[j]=(temp/len-round(temp/len))*len;
             allpart[i].speed[j]=allpart[i].speed[j]+0.5*Dt*allpart[i].force[j];
+            tempdis=delta*delta+tempdis;
+        }
+        tempdis=sqrt(tempdis);
+        if (maxstep[0]<tempdis) {
+            maxstep[0]=tempdis;
+        }else if (maxstep[1]<tempdis){
+            maxstep[1]=tempdis;
         }
     }
+    return maxstep;
 }
 void leapfrogtwo(int N,double Dt,particle* allpart){
     for(size_t i=0;i<N;i++){
@@ -186,14 +221,14 @@ void updateforce(int N,double len,particle* allpart){
     }
 }
 //update the neighbor for one particle.
-void updateallneigh(int N,int cellsize,double len,parnode* cellall[],particle* allpart){
+void updateallneigh(int N,int cellsize,double len,double rverlet,parnode* cellall[],particle* allpart){
     for (int k=0; k<N; k++) {
-        updateoneneigh(k, cellsize, len, cellall, allpart);
+        updateoneneigh(k, cellsize, len,rverlet, cellall, allpart);
     }
 }
-void updateoneneigh(int ind,int cellsize,double len,parnode* cellall[],particle* allpart){
+void updateoneneigh(int ind,int cellsize,double len,double rverlet,parnode* cellall[],particle* allpart){
     int box;
-    double rij,dij;
+    double rij;
     parnode* temp;
     allpart[ind].neighbor->next=NULL;
     int* diff=bias(ind, cellsize, allpart);//the boundary part should be consider two bias and inside only need one.
@@ -207,8 +242,7 @@ void updateoneneigh(int ind,int cellsize,double len,parnode* cellall[],particle*
                 while (temp!=NULL) {
                     if (temp->index!=ind) {
                         rij=distance(temp->index, ind, len, allpart);
-                        dij=allpart[temp->index].radius+allpart[ind].radius;
-                        if (rij<dij) {
+                        if (rij<rverlet) {
                         addptolist(allpart[ind].neighbor,allpart[ind].neighbor->tail,temp->index);
                         }
                     }
